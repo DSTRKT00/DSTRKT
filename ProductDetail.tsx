@@ -1,0 +1,665 @@
+
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { PRODUCTS, EXCLUDED_PRODUCT_NAMES, BLOCK_PARTY_NIGHT_SHIFT_IMAGES } from './constants';
+import { 
+  ArrowLeft, Plus, Minus, ShieldCheck, Truck, RotateCcw, 
+  Check, ShoppingBag, ChevronLeft, ChevronRight, Loader2
+} from 'lucide-react';
+import { useCart } from './CartContext';
+import { supabase, isSupabaseConfigured } from './supabase';
+import { Product } from './types';
+
+const getOrderedSlides = (product: Product | null, gallery: string[]): string[] => {
+  if (!product) return [];
+
+  let allSlides = gallery.length > 0 
+    ? Array.from(new Set([...gallery, product.image].filter(Boolean)))
+    : [product.image].filter(Boolean);
+
+  if (product.name.toLowerCase().includes('scarface')) {
+    const desiredOrder = [
+      'scarface%2010.jpg',
+      'scarface%2014.jpg',
+      'scarface%2001.jpg',
+      'scarface%2009.jpg',
+      'scarface%20panel%20grid.jpeg',
+      'scarface%2002.jpg',
+      'scarface.png'
+    ];
+
+    const ordered: string[] = [];
+    desiredOrder.forEach(pattern => {
+      const decodedPattern = decodeURIComponent(pattern);
+      const idx = allSlides.findIndex(url => {
+        const lower = url.toLowerCase();
+        return lower.includes(pattern) || lower.includes(decodedPattern);
+      });
+      if (idx !== -1) {
+        ordered.push(allSlides[idx]);
+        allSlides.splice(idx, 1);
+      }
+    });
+
+    allSlides = [...ordered, ...allSlides];
+    if (!allSlides.some(u => u.toLowerCase().includes('scarface.png'))) {
+      allSlides.push('https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Scarface.png');
+    }
+  }
+
+  if (product.name.toLowerCase().includes('shadow jin')) {
+    const sjPngIndex = allSlides.findIndex(url => 
+      url.toLowerCase().includes('shadow%20jin.png') || url.toLowerCase().includes('shadow jin.png')
+    );
+    if (sjPngIndex !== -1) {
+      const [sjPng] = allSlides.splice(sjPngIndex, 1);
+      allSlides.push(sjPng);
+    }
+  }
+
+  if (product.name.toLowerCase().includes('blood splatter')) {
+    const desiredOrder = [
+      'blood%20splatter%2001.jpg',
+      'blood%20splatter%2002.jpg',
+      'blood%20splatter%2003.jpg',
+      'blood%20splatter%2004.jpg',
+      'blood%20splatter%2005.jpg',
+      'blood%20splatter%2006.jpg',
+      'blood%20splatter%2007.jpeg',
+      'blood%20splatter.png'
+    ];
+
+    const ordered: string[] = [];
+    desiredOrder.forEach(pattern => {
+      const decodedPattern = decodeURIComponent(pattern);
+      const idx = allSlides.findIndex(url => {
+        const lower = url.toLowerCase();
+        return lower.includes(pattern) || lower.includes(decodedPattern);
+      });
+      if (idx !== -1) {
+        ordered.push(allSlides[idx]);
+        allSlides.splice(idx, 1);
+      }
+    });
+
+    allSlides = [...ordered, ...allSlides];
+    if (!allSlides.some(u => u.toLowerCase().includes('blood%20splatter.png') || u.toLowerCase().includes('blood splatter.png'))) {
+      allSlides.push('https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Blood%20Splatter.png');
+    }
+  }
+
+  if (product.name.toLowerCase().includes('cigarettes')) {
+    const cgPngIndex = allSlides.findIndex(url => 
+      url.toLowerCase().endsWith('cigarettes.png') || url.toLowerCase().includes('cigarettes.png')
+    );
+    if (cgPngIndex !== -1) {
+      const [cgPng] = allSlides.splice(cgPngIndex, 1);
+      allSlides.push(cgPng);
+    } else {
+      allSlides.push('https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Cigarettes.png');
+    }
+  }
+
+  if (product.name.toLowerCase().includes('swarm')) {
+    const bodyBagUrl = 'https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Swarm%20Deffel.png';
+    const stingUrl = 'https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Swarm%20Duffel%202.png';
+
+    if (!allSlides.some(u => u.toLowerCase().includes('swarm%20deffel') || u.toLowerCase().includes('swarm deffel'))) {
+      allSlides.push(bodyBagUrl);
+    }
+    if (!allSlides.some(u => u.toLowerCase().includes('swarm%20duffel%202') || u.toLowerCase().includes('swarm duffel 2'))) {
+      allSlides.push(stingUrl);
+    }
+
+    const desiredOrder = [
+      'swarm%20duffel%2001.jpg',
+      'swarm%20duffel%2002.jpg',
+      'swarm%20duffel%2003.jpg',
+      'swarm%20duffel%2004.jpg',
+      'swarm%20duffel%2005.jpg'
+    ];
+
+    const ordered: string[] = [];
+    desiredOrder.forEach(pattern => {
+      const decodedPattern = decodeURIComponent(pattern);
+      const idx = allSlides.findIndex(url => {
+        const lower = url.toLowerCase();
+        return lower.includes(pattern) || lower.includes(decodedPattern);
+      });
+      if (idx !== -1) {
+        ordered.push(allSlides[idx]);
+        allSlides.splice(idx, 1);
+      }
+    });
+
+    let bodyBagSlide: string | undefined;
+    let stingSlide: string | undefined;
+    const remaining: string[] = [];
+
+    allSlides.forEach(slide => {
+      const lower = slide.toLowerCase();
+      if (lower.includes('swarm%20duffel%202') || lower.includes('swarm duffel 2')) {
+        stingSlide = slide;
+      } else if (lower.includes('swarm%20deffel') || lower.includes('swarm deffel')) {
+        bodyBagSlide = slide;
+      } else {
+        remaining.push(slide);
+      }
+    });
+
+    allSlides = [
+      ...ordered,
+      ...remaining,
+      bodyBagSlide || bodyBagUrl,
+      stingSlide || stingUrl
+    ];
+  }
+
+  const isBlockParty = product.name.toLowerCase().includes('block party');
+
+  if (isBlockParty) {
+    const bp001 = 'https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Block%20party%20001.jpg';
+    if (!allSlides.some(u => u.toLowerCase().includes('block%20party%20001.jpg') || u.toLowerCase().includes('block party 001.jpg'))) {
+      allSlides.push(bp001);
+    }
+    const bp002 = 'https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Block%20Party%20002.jpg';
+    if (!allSlides.some(u => u.toLowerCase().includes('block%20party%20002.jpg') || u.toLowerCase().includes('block party 002.jpg'))) {
+      allSlides.push(bp002);
+    }
+
+    const desiredOrder = [
+      'block%20party%205.jpg',
+      'block%20party%20001.jpg',
+      'block%20party%20002.jpg',
+      'block%20party%206.jpg',
+      'block%20party%201.jpg',
+      'block%20party%202.jpg',
+      'block%20party%203.jpg',
+      'block%20party%204.jpg',
+      'block%20party.png'
+    ];
+
+    const ordered: string[] = [];
+    desiredOrder.forEach(pattern => {
+      const decodedPattern = decodeURIComponent(pattern);
+      const idx = allSlides.findIndex(url => {
+        const lower = url.toLowerCase();
+        return lower.includes(pattern) || lower.includes(decodedPattern);
+      });
+      if (idx !== -1) {
+        ordered.push(allSlides[idx]);
+        allSlides.splice(idx, 1);
+      }
+    });
+
+    // Night Shift images appear after all Block Party images
+    const nightShiftSlides: string[] = [];
+    BLOCK_PARTY_NIGHT_SHIFT_IMAGES.forEach(nsUrl => {
+      if (!nightShiftSlides.includes(nsUrl)) {
+        nightShiftSlides.push(nsUrl);
+      }
+    });
+
+    const nonNightSlides: string[] = [];
+    allSlides.forEach(slide => {
+      const lower = slide.toLowerCase();
+      if (lower.includes('night%20shift') || lower.includes('night shift') || lower.includes('nightshift')) {
+        if (!nightShiftSlides.includes(slide)) {
+          nightShiftSlides.push(slide);
+        }
+      } else {
+        nonNightSlides.push(slide);
+      }
+    });
+
+    allSlides = [...ordered, ...nonNightSlides];
+    if (!allSlides.some(u => u.toLowerCase().includes('block%20party.png') || u.toLowerCase().includes('block party.png'))) {
+      allSlides.push('https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Block%20Party.png');
+    }
+
+    // Append all Night Shift images strictly after all Block Party images
+    allSlides = Array.from(new Set([...allSlides, ...nightShiftSlides]));
+  }
+
+  return allSlides;
+};
+
+const ProductDetail: React.FC = () => {
+  const { id } = useParams();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [gallery, setGallery] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { addToCart } = useCart();
+  
+  const [quantity, setQuantity] = useState(1);
+  const [isAdding, setIsAdding] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [selectedVersion, setSelectedVersion] = useState<'Limited' | 'Night Shift'>('Limited');
+  const [selectedSwarmVersion, setSelectedSwarmVersion] = useState<'Body Bag' | 'Sting'>('Body Bag');
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+
+  const allSlides = useMemo(() => getOrderedSlides(product, gallery), [product, gallery]);
+
+  useEffect(() => {
+    if (!product) return;
+    const isBlockParty = product.name.toLowerCase().includes('block party');
+    if (isBlockParty && allSlides[currentSlide]) {
+      const lower = allSlides[currentSlide].toLowerCase();
+      const isNight = lower.includes('night%20shift') || lower.includes('night shift') || lower.includes('nightshift');
+      setSelectedVersion(prev => {
+        const next = isNight ? 'Night Shift' : 'Limited';
+        return prev === next ? prev : next;
+      });
+    }
+
+    const isSwarm = product.name.toLowerCase().includes('swarm');
+    if (isSwarm && allSlides.length >= 2) {
+      if (currentSlide === allSlides.length - 1) {
+        setSelectedSwarmVersion('Sting');
+      } else if (currentSlide === allSlides.length - 2) {
+        setSelectedSwarmVersion('Body Bag');
+      }
+    }
+  }, [currentSlide, product, allSlides]);
+
+  useEffect(() => {
+    const fetchProductData = async () => {
+      setLoading(true);
+      try {
+        const isUuid = (val?: string): boolean => 
+          Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val));
+
+        if (!isSupabaseConfigured || !id || !isUuid(id)) {
+          const localProduct = PRODUCTS.find(p => p.id === id || p.name.toLowerCase() === id?.toLowerCase()) || PRODUCTS[0];
+          setProduct(localProduct);
+          let localGallery = (localProduct.gallery || []).filter(u => !u.includes('corenexis.com'));
+          setGallery(localGallery);
+          setLoading(false);
+          return;
+        }
+
+        // Fetch Product
+        const { data: prodData, error: prodError } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (prodError || !prodData) {
+          // Try fetching from vault_drops
+          const { data: vaultData, error: vaultError } = await supabase
+            .from('vault_drops')
+            .select('*')
+            .eq('id', id)
+            .maybeSingle();
+
+          if (vaultError || !vaultData) {
+            const localFallback = PRODUCTS.find(p => p.id === id || p.name.toLowerCase() === id?.toLowerCase()) || PRODUCTS[0];
+            setProduct(localFallback);
+            let localGallery = (localFallback.gallery || []).filter(u => !u.includes('corenexis.com'));
+            setGallery(localGallery);
+          } else {
+            setProduct({
+              id: vaultData.id,
+              name: vaultData.name,
+              price: '$280', // Standard price for vault items
+              description: vaultData.description,
+              image: vaultData.image_url,
+              tag: 'VAULT'
+            });
+            setGallery([]);
+          }
+        } else {
+          // Check if excluded
+          if (EXCLUDED_PRODUCT_NAMES.some(excluded => prodData.name.toLowerCase().includes(excluded.toLowerCase()))) {
+            setProduct(null);
+            setLoading(false);
+            return;
+          }
+
+          const localMatch = PRODUCTS.find(p => p.id === id || p.name.toLowerCase() === prodData.name.toLowerCase());
+          let mainImage = prodData.image_url;
+          if (!mainImage || mainImage.includes('corenexis.com') || localMatch?.image) {
+            if (localMatch?.image) {
+              mainImage = localMatch.image;
+            }
+          }
+
+          setProduct({
+            id: prodData.id,
+            name: prodData.name,
+            price: prodData.price_display,
+            description: prodData.description,
+            image: mainImage,
+            tag: prodData.tag,
+            stock: prodData.stock ?? 10
+          });
+
+          // Use configured gallery images
+          let images: string[] = [];
+          if (localMatch?.gallery) {
+            localMatch.gallery.forEach(gImg => {
+              if (gImg && !gImg.includes('corenexis.com') && !images.includes(gImg)) {
+                images.push(gImg);
+              }
+            });
+          }
+          if (prodData.name.toLowerCase().includes('swarm')) {
+            const swarmBodyBag = 'https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Swarm%20Deffel.png';
+            const swarmSting = 'https://bjylzveziwmocmlfyfgm.supabase.co/storage/v1/object/public/Assets/Swarm%20Duffel%202.png';
+            if (!images.includes(swarmBodyBag)) {
+              images.push(swarmBodyBag);
+            }
+            if (!images.includes(swarmSting)) {
+              images.push(swarmSting);
+            }
+          }
+          setGallery(images);
+        }
+      } catch (err) {
+        console.error('Fetch error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProductData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="bg-black min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#D4AF37]" size={40} />
+      </div>
+    );
+  }
+
+  if (!product || EXCLUDED_PRODUCT_NAMES.some(excluded => product.name.toLowerCase().includes(excluded.toLowerCase()))) {
+    return (
+      <div className="bg-black min-h-screen flex flex-col items-center justify-center p-6 text-center">
+        <h2 className="text-4xl font-black uppercase tracking-tighter mb-8">Product Not Found</h2>
+        <Link to="/collections">
+          <button className="bg-white text-black px-12 py-6 text-[11px] tracking-[0.5em] font-black uppercase hover:bg-[#D4AF37] transition-all">
+            Return to Collection
+          </button>
+        </Link>
+      </div>
+    );
+  }
+
+  const isVaultItem = product.tag === 'VAULT';
+  const backToPath = isVaultItem ? '/vault' : '/collections';
+  const backToLabel = isVaultItem ? 'BACK TO VAULT' : 'Back to Collection';
+  const isBlockParty = product.name.toLowerCase().includes('block party');
+  const isSwarmDuffel = product.name.toLowerCase().includes('swarm');
+
+  const handleVersionSelect = (version: 'Limited' | 'Night Shift') => {
+    setSelectedVersion(version);
+    if (version === 'Limited') {
+      setCurrentSlide(0);
+    } else {
+      const nsIndex = allSlides.findIndex(u => {
+        const lower = u.toLowerCase();
+        return lower.includes('night%20shift') || lower.includes('night shift') || lower.includes('nightshift');
+      });
+      if (nsIndex !== -1) {
+        setCurrentSlide(nsIndex);
+      }
+    }
+  };
+
+  const handleSwarmVersionSelect = (version: 'Body Bag' | 'Sting') => {
+    setSelectedSwarmVersion(version);
+    if (allSlides.length >= 2) {
+      if (version === 'Sting') {
+        setCurrentSlide(allSlides.length - 1);
+      } else {
+        setCurrentSlide(allSlides.length - 2);
+      }
+    }
+  };
+
+  const handleAddToCart = () => {
+    setIsAdding(true);
+    let productToAdd = product;
+    if (isBlockParty) {
+      productToAdd = {
+        ...product,
+        id: `${product.id}-${selectedVersion.toLowerCase().replace(/\s+/g, '-')}`,
+        name: `${product.name} - ${selectedVersion}`
+      };
+    } else if (isSwarmDuffel) {
+      productToAdd = {
+        ...product,
+        id: `${product.id}-${selectedSwarmVersion.toLowerCase().replace(/\s+/g, '-')}`,
+        name: `${product.name} - ${selectedSwarmVersion}`
+      };
+    }
+    addToCart(productToAdd, quantity);
+    setTimeout(() => setIsAdding(false), 2000);
+  };
+
+  const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % allSlides.length);
+  const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + allSlides.length) % allSlides.length);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEndHandler = () => {
+    if (!touchStart || !touchEnd) return;
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe) {
+      nextSlide();
+    } else if (isRightSwipe) {
+      prevSlide();
+    }
+  };
+
+  return (
+    <main className="bg-black min-h-screen pt-24 md:pt-32 pb-16 md:pb-24 selection:bg-[#D4AF37] selection:text-black">
+      <div className="max-w-[1800px] mx-auto px-6 md:px-12">
+        <Link 
+          to={backToPath} 
+          className="inline-flex items-center gap-3 text-[10px] tracking-[0.4em] font-bold text-white/40 hover:text-white transition-colors uppercase mb-8 md:mb-12 group"
+        >
+          <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> {backToLabel}
+        </Link>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 md:gap-16 xl:gap-24">
+          <div className="lg:col-span-7 xl:col-span-8 space-y-6 md:space-y-8">
+            <div 
+              className="relative h-[600px] w-full bg-[#0d0d0d] border border-white/5 overflow-hidden group"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEndHandler}
+            >
+              <div className="w-full h-full relative overflow-hidden touch-pan-y">
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={currentSlide}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.5, ease: [0.33, 1, 0.68, 1] }}
+                    className="w-full h-full"
+                  >
+                    <img 
+                      src={allSlides[currentSlide]} 
+                      alt={`${product.name} view ${currentSlide + 1}`} 
+                      className="w-full h-full object-contain pointer-events-none select-none"
+                    />
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              <button 
+                onClick={prevSlide}
+                className="absolute left-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/40 backdrop-blur-md border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex hover:bg-[#D4AF37] hover:text-black"
+              >
+                <ChevronLeft size={24} />
+              </button>
+              <button 
+                onClick={nextSlide}
+                className="absolute right-6 top-1/2 -translate-y-1/2 w-12 h-12 flex items-center justify-center bg-black/40 backdrop-blur-md border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex hover:bg-[#D4AF37] hover:text-black"
+              >
+                <ChevronRight size={24} />
+              </button>
+
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3">
+                {allSlides.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setCurrentSlide(idx)}
+                    className={`h-1 transition-all duration-500 ${currentSlide === idx ? 'w-12 bg-[#D4AF37]' : 'w-4 bg-white/20'}`}
+                  />
+                ))}
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-4 gap-4">
+              {allSlides.map((slide, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => setCurrentSlide(idx)}
+                  className={`aspect-square bg-[#0d0d0d] border transition-all duration-500 overflow-hidden ${currentSlide === idx ? 'border-[#D4AF37] opacity-100' : 'border-white/5 opacity-40 hover:opacity-100'}`}
+                >
+                  <img src={slide} alt={`Thumbnail ${idx + 1}`} loading="lazy" className="w-full h-full object-contain" />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 xl:col-span-4">
+            <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="lg:sticky lg:top-40">
+              <p className="text-[#D4AF37] text-[10px] tracking-[0.5em] font-black uppercase mb-4">{product.tag || 'NEW ARRIVAL'}</p>
+              <h1 className="text-3xl sm:text-4xl md:text-6xl font-black tracking-tighter uppercase mb-4 md:mb-6 leading-none">
+                {product.name === 'Swarm Duffel' && currentSlide === 1 ? 'Swarm Duffel 02' : product.name}
+              </h1>
+              <p className="text-xl md:text-2xl font-black text-white mb-4">{product.price}</p>
+
+              {isBlockParty && (
+                <div className="mb-6 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleVersionSelect('Limited')}
+                    className={`px-5 py-2.5 text-[11px] tracking-[0.25em] font-black uppercase transition-colors duration-200 border ${
+                      selectedVersion === 'Limited'
+                        ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                        : 'bg-black/60 text-white/70 border-white/20 hover:border-white/50 hover:text-white'
+                    }`}
+                  >
+                    Limited
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVersionSelect('Night Shift')}
+                    className={`px-5 py-2.5 text-[11px] tracking-[0.25em] font-black uppercase transition-colors duration-200 border ${
+                      selectedVersion === 'Night Shift'
+                        ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                        : 'bg-black/60 text-white/70 border-white/20 hover:border-white/50 hover:text-white'
+                    }`}
+                  >
+                    Night Shift
+                  </button>
+                </div>
+              )}
+
+              {isSwarmDuffel && (
+                <div className="mb-6 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => handleSwarmVersionSelect('Body Bag')}
+                    className={`px-5 py-2.5 text-[11px] tracking-[0.25em] font-black uppercase transition-colors duration-200 border ${
+                      selectedSwarmVersion === 'Body Bag'
+                        ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                        : 'bg-black/60 text-white/70 border-white/20 hover:border-white/50 hover:text-white'
+                    }`}
+                  >
+                    Body Bag
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSwarmVersionSelect('Sting')}
+                    className={`px-5 py-2.5 text-[11px] tracking-[0.25em] font-black uppercase transition-colors duration-200 border ${
+                      selectedSwarmVersion === 'Sting'
+                        ? 'bg-[#D4AF37] text-black border-[#D4AF37]'
+                        : 'bg-black/60 text-white/70 border-white/20 hover:border-white/50 hover:text-white'
+                    }`}
+                  >
+                    Sting
+                  </button>
+                </div>
+              )}
+
+              {/* Removed stock indicator */}
+              <div className="w-full h-[1px] bg-white/10 mb-6 md:mb-8"></div>
+              <p className="text-white/60 text-sm md:text-base font-light leading-relaxed mb-8 md:mb-12">{product.description}</p>
+
+              <div className="space-y-6 md:space-y-8">
+                <div className="flex items-center gap-6 md:gap-8">
+                  <span className="text-[10px] tracking-[0.4em] font-bold text-white/40 uppercase">Quantity</span>
+                  <div className="flex items-center border border-white/10 bg-white/5">
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 md:p-4 text-white/40 hover:text-white"><Minus size={14} /></button>
+                    <span className="w-10 md:w-12 text-center text-[11px] font-black">{quantity}</span>
+                    <button onClick={() => setQuantity(Math.min(100, quantity + 1))} className="p-3 md:p-4 text-white/40 hover:text-white"><Plus size={14} /></button>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={handleAddToCart}
+                  disabled={isAdding || (product.stock !== undefined && product.stock <= 0)}
+                  className={`w-full py-5 md:py-6 text-[11px] tracking-[0.5em] font-black uppercase transition-all duration-500 flex items-center justify-center gap-4 relative overflow-hidden group
+                    ${isAdding || (product.stock !== undefined && product.stock <= 0) ? 'bg-gray-800 text-gray-500 cursor-not-allowed' : 'bg-white text-black hover:bg-[#D4AF37]'}`}
+                >
+                  <AnimatePresence mode="wait">
+                    {isAdding ? (
+                      <motion.div key="success" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex items-center gap-2">
+                        <Check size={18} /> Added to Bag
+                      </motion.div>
+                    ) : (
+                      <motion.div key="default" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex items-center gap-2">
+                        <ShoppingBag size={18} /> Order
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </button>
+              </div>
+
+              <div className="mt-16 grid grid-cols-1 gap-6">
+                <div className="flex items-center gap-6 p-6 border border-white/5 bg-white/[0.02]">
+                  <ShieldCheck size={24} className="text-[#D4AF37]" strokeWidth={1.5} />
+                  <div>
+                    <h5 className="text-[10px] tracking-[0.2em] font-black uppercase text-white mb-1">Lifetime Warranty</h5>
+                    <p className="text-[9px] text-white/40 uppercase">On all hardware and stitching.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-6 p-6 border border-white/5 bg-white/[0.02]">
+                  <Truck size={24} className="text-[#D4AF37]" strokeWidth={1.5} />
+                  <div>
+                    <h5 className="text-[10px] tracking-[0.2em] font-black uppercase text-white mb-1">Priority Logistics</h5>
+                    <p className="text-[9px] text-white/40 uppercase">Complimentary express shipping global.</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    </main>
+  );
+};
+
+export default ProductDetail;
